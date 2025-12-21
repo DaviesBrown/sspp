@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:DaviesBrown/sspp.git
+    repoURL: https://github.com/DaviesBrown/sspp.git
     targetRevision: HEAD
     path: infrastructure/k8s
   destination:
