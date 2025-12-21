@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: sspp/api:latest
+          image: davidbrown77/sspp-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
