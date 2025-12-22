@@ -21,7 +21,7 @@ export class EventsService {
         type: 'exponential',
         delay: 2000,
       },
-      removeOnComplete: true,
+      removeOnComplete: 1000, // Keep completed jobs for 1000 most recent
       removeOnFail: false,
     });
     
