@@ -7,4 +7,4 @@ VALUES
     ('acc_001', 'user_002', 'meeting_booked', 'intent', 0.80, NOW() - INTERVAL '2 days', '{"meeting_type": "demo", "duration": 30}'),
     ('acc_002', 'user_003', 'email_sent', 'outreach', 0.10, NOW() - INTERVAL '1 day', '{"campaign": "New Year"}'),
     ('acc_002', 'user_003', 'call_made', 'outreach', 0.50, NOW() - INTERVAL '12 hours', '{"duration": 15, "outcome": "interested"}'),
-    ('acc_003', 'user_004', 'demo_completed', 'high_intent', 0.90, NOW() - INTERVAL '6 hours', '{"attendees": 3, "duration": 45});
+    ('acc_003', 'user_004', 'demo_completed', 'high_intent', 0.90, NOW() - INTERVAL '6 hours', '{"attendees": 3, "duration": 45}');
