@@ -71,6 +71,11 @@ services:
       QUEUE_NAME: sales-events
       QUEUE_CONCURRENCY: 5
       LOG_LEVEL: info
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sales_signals
+      DB_USER: sspp_user
+      DB_PASSWORD: dev_password
     ports:
       - "3000:3000"
     depends_on:
