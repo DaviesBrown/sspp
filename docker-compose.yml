@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: sspp-postgres
+    networks:
+      - sspp_network
     environment:
       POSTGRES_DB: sales_signals
       POSTGRES_USER: sspp_user
@@ -19,6 +21,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sspp-redis
+    networks:
+      - sspp_network
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -33,6 +37,8 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: sspp-elasticsearch
+    networks:
+      - sspp_network
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
@@ -54,6 +60,8 @@ services:
       dockerfile: Dockerfile
     image: ${DOCKER_REGISTRY:-brownsspp}/sspp-api:${VERSION:-latest}
     container_name: sspp-api
+    networks:
+      - sspp_network
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -81,6 +89,8 @@ services:
       dockerfile: Dockerfile
     image: ${DOCKER_REGISTRY:-brownsspp}/sspp-worker:${VERSION:-latest}
     container_name: sspp-worker
+    networks:
+      - sspp_network
     environment:
       NODE_ENV: development
       REDIS_HOST: redis
@@ -102,6 +112,9 @@ services:
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped
+
+networks:
+  sspp_network:
 
 volumes:
   postgres_data:
