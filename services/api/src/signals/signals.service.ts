@@ -127,42 +127,46 @@ export class SignalsService {
   }
 
   async getStats() {
-    const query = `
-      SELECT 
-        COUNT(*) as total_signals,
-        COUNT(DISTINCT account_id) as unique_accounts,
-        COUNT(DISTINCT user_id) as unique_users,
-        AVG(signal_score) as avg_signal_score,
-        jsonb_object_agg(signal_type, signal_count) as signals_by_type,
-        jsonb_object_agg(event_type, event_count) as signals_by_event
-      FROM (
-        SELECT 
-          account_id,
-          user_id,
-          signal_score,
-          signal_type,
-          event_type,
-          COUNT(*) OVER (PARTITION BY signal_type) as signal_count,
-          COUNT(*) OVER (PARTITION BY event_type) as event_count
-        FROM sales_signals
-      ) subquery
-      GROUP BY total_signals, unique_accounts, unique_users, avg_signal_score
-    `;
+    // Compute stats via straightforward aggregate queries for reliability
+    const [totalsRes, typeRes, eventRes] = await Promise.all([
+      this.pool.query(
+        `SELECT 
+           COUNT(*)::bigint as total_signals,
+           COUNT(DISTINCT account_id)::bigint as unique_accounts,
+           COUNT(DISTINCT user_id)::bigint as unique_users,
+           COALESCE(AVG(signal_score), 0) as avg_signal_score
+         FROM sales_signals`
+      ),
+      this.pool.query(
+        `SELECT signal_type, COUNT(*)::bigint as count
+         FROM sales_signals
+         GROUP BY signal_type`
+      ),
+      this.pool.query(
+        `SELECT event_type, COUNT(*)::bigint as count
+         FROM sales_signals
+         GROUP BY event_type`
+      ),
+    ]);
 
-    const result = await this.pool.query(query);
+    const totals = totalsRes.rows[0] || {
+      total_signals: 0,
+      unique_accounts: 0,
+      unique_users: 0,
+      avg_signal_score: 0,
+    };
 
-    if (result.rows.length === 0) {
-      return {
-        total_signals: 0,
-        unique_accounts: 0,
-        unique_users: 0,
-        avg_signal_score: 0,
-        signals_by_type: {},
-        signals_by_event: {},
-      };
-    }
+    const signals_by_type = (typeRes.rows || []).reduce((acc: Record<string, number>, row: any) => {
+      if (row.signal_type) acc[row.signal_type] = Number(row.count);
+      return acc;
+    }, {});
 
-    return result.rows[0];
+    const signals_by_event = (eventRes.rows || []).reduce((acc: Record<string, number>, row: any) => {
+      if (row.event_type) acc[row.event_type] = Number(row.count);
+      return acc;
+    }, {});
+
+    return { ...totals, signals_by_type, signals_by_event };
   }
 
   async onModuleDestroy() {
