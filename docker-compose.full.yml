@@ -1,0 +1,109 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sspp-postgres
+    environment:
+      POSTGRES_DB: sales_signals
+      POSTGRES_USER: sspp_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sspp_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sspp-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: sspp-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-brownsspp}/sspp-api:${VERSION:-latest}
+    container_name: sspp-api
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      API_PREFIX: api/v1
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_NAME: sales-events
+      QUEUE_CONCURRENCY: 5
+      LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build:
+      context: ./services/worker
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-brownsspp}/sspp-worker:${VERSION:-latest}
+    container_name: sspp-worker
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_NAME: sales-events
+      QUEUE_CONCURRENCY: 5
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: sales_signals
+      POSTGRES_USER: sspp_user
+      POSTGRES_PASSWORD: dev_password
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
