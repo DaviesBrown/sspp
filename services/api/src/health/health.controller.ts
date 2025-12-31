@@ -1,24 +1,128 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { Response } from 'express';
+import { Pool } from 'pg';
 
 @ApiTags('health')
 @Controller()
 export class HealthController {
+  private pool: Pool;
+
+  constructor(
+    @InjectQueue(process.env.QUEUE_NAME || 'sales-events')
+    private readonly queue: Queue,
+  ) {
+    // PostgreSQL connection pool for health checks
+    this.pool = new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'sales_signals',
+      user: process.env.DB_USER || 'sspp_user',
+      password: process.env.DB_PASSWORD || 'sspp_password',
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  }
+
   @Get('health')
-  @ApiOperation({ summary: 'Health check endpoint' })
-  health() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-    };
+  @ApiOperation({ summary: 'Health check endpoint with dependency status' })
+  @ApiResponse({
+    status: 200,
+    description: 'All services healthy',
+    schema: {
+      example: {
+        status: 'healthy',
+        timestamp: '2025-12-22T10:00:00.000Z',
+        services: {
+          redis: { status: 'healthy', responseTime: 5 },
+          postgres: { status: 'healthy', responseTime: 12 },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 503, description: 'One or more services unhealthy' })
+  async health(@Res() res: Response) {
+    const timestamp = new Date().toISOString();
+    const checks: Record<string, any> = {};
+
+    // Check Redis (via Bull queue)
+    const redisStart = Date.now();
+    try {
+      await this.queue.client.ping();
+      checks.redis = {
+        status: 'healthy',
+        responseTime: Date.now() - redisStart,
+      };
+    } catch (error) {
+      checks.redis = {
+        status: 'unhealthy',
+        error: error.message,
+      };
+    }
+
+    // Check PostgreSQL
+    const pgStart = Date.now();
+    try {
+      await this.pool.query('SELECT 1');
+      checks.postgres = {
+        status: 'healthy',
+        responseTime: Date.now() - pgStart,
+      };
+    } catch (error) {
+      checks.postgres = {
+        status: 'unhealthy',
+        error: error.message,
+      };
+    }
+
+    const allHealthy = Object.values(checks).every((check: any) => check.status === 'healthy');
+    const overallStatus = allHealthy ? 'healthy' : 'degraded';
+    const statusCode = allHealthy ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+
+    return res.status(statusCode).json({
+      status: overallStatus,
+      timestamp,
+      services: checks,
+    });
   }
 
   @Get('ready')
   @ApiOperation({ summary: 'Readiness check endpoint' })
-  ready() {
-    return {
-      status: 'ready',
-      timestamp: new Date().toISOString(),
-    };
+  @ApiResponse({
+    status: 200,
+    description: 'Service ready to accept traffic',
+    schema: {
+      example: {
+        status: 'ready',
+        timestamp: '2025-12-22T10:00:00.000Z',
+        uptime: 123.45,
+      },
+    },
+  })
+  async ready(@Res() res: Response) {
+    const timestamp = new Date().toISOString();
+    
+    // Quick check - just verify Redis is reachable
+    try {
+      await this.queue.client.ping();
+      return res.status(HttpStatus.OK).json({
+        status: 'ready',
+        timestamp,
+        uptime: process.uptime(),
+      });
+    } catch (error) {
+      return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        status: 'not ready',
+        timestamp,
+        error: 'Redis connection failed',
+      });
+    }
+  }
+
+  async onModuleDestroy() {
+    await this.pool.end();
   }
 }

@@ -1,0 +1,7 @@
+# Example terraform.tfvars file
+# Copy this to terraform.tfvars and fill in your values
+
+# linode_token = "your-linode-api-token"
+# environment  = "dev"
+# region       = "us-east"
+# node_count   = 3
