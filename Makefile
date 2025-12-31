@@ -169,7 +169,7 @@ build-dockerhub:
 		exit 1; \
 	fi
 	@echo "Building with registry: $(DOCKER_USERNAME)"
-	DOCKER_REGISTRY=$(DOCKER_USERNAME) VERSION=$(TAG) docker-compose -f docker-compose.build.yml build
+	DOCKER_REGISTRY=$(DOCKER_USERNAME) VERSION=$(TAG) docker-compose -f docker-compose.yml build
 	docker tag $(DOCKER_USERNAME)/sspp-api:$(TAG) $(DOCKER_USERNAME)/sspp-api:latest
 	docker tag $(DOCKER_USERNAME)/sspp-worker:$(TAG) $(DOCKER_USERNAME)/sspp-worker:latest
 	@echo "Images built and tagged!"
