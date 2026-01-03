@@ -4,6 +4,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { Response } from 'express';
 import { Pool } from 'pg';
+import { MetricsService } from '../metrics/metrics.service';
 
 @ApiTags('health')
 @Controller()
@@ -13,6 +14,7 @@ export class HealthController {
   constructor(
     @InjectQueue(process.env.QUEUE_NAME || 'sales-events')
     private readonly queue: Queue,
+    private readonly metricsService: MetricsService,
   ) {
     // PostgreSQL connection pool for health checks
     this.pool = new Pool({
@@ -49,29 +51,42 @@ export class HealthController {
     const checks: Record<string, any> = {};
 
     // Check Redis (via Bull queue)
+    const redisTimer = this.metricsService.startRedisTimer('ping');
     const redisStart = Date.now();
     try {
       await this.queue.client.ping();
+      redisTimer();
       checks.redis = {
         status: 'healthy',
         responseTime: Date.now() - redisStart,
       };
+      this.metricsService.redisConnectionStatus.set(1);
     } catch (error) {
+      redisTimer();
       checks.redis = {
         status: 'unhealthy',
         error: error.message,
       };
+      this.metricsService.redisConnectionStatus.set(0);
     }
 
     // Check PostgreSQL
+    const dbTimer = this.metricsService.startDbTimer('health_check', 'system');
     const pgStart = Date.now();
     try {
       await this.pool.query('SELECT 1');
+      dbTimer();
       checks.postgres = {
         status: 'healthy',
         responseTime: Date.now() - pgStart,
       };
+      
+      // Update connection pool metrics
+      this.metricsService.dbConnectionPool.set({ state: 'total' }, this.pool.totalCount);
+      this.metricsService.dbConnectionPool.set({ state: 'idle' }, this.pool.idleCount);
+      this.metricsService.dbConnectionPool.set({ state: 'waiting' }, this.pool.waitingCount);
     } catch (error) {
+      dbTimer();
       checks.postgres = {
         status: 'unhealthy',
         error: error.message,
@@ -108,12 +123,14 @@ export class HealthController {
     // Quick check - just verify Redis is reachable
     try {
       await this.queue.client.ping();
+      this.metricsService.redisConnectionStatus.set(1);
       return res.status(HttpStatus.OK).json({
         status: 'ready',
         timestamp,
         uptime: process.uptime(),
       });
     } catch (error) {
+      this.metricsService.redisConnectionStatus.set(0);
       return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
         status: 'not ready',
         timestamp,
