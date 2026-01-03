@@ -5,29 +5,29 @@ metadata:
   namespace: argocd
 data:
   policy.default: role:readonly
-  
+
   policy.csv: |
     # Developers can sync dev apps only
     p, role:developer, applications, sync, sspp-dev, allow
     p, role:developer, applications, get, *, allow
     p, role:developer, applications, action/*, sspp-dev, allow
     g, developers@example.com, role:developer
-    
+
     # DevOps can sync all apps
     p, role:devops, applications, *, *, allow
     p, role:devops, clusters, get, *, allow
     p, role:devops, repositories, get, *, allow
     p, role:devops, projects, get, *, allow
     g, devops@example.com, role:devops
-    
+
     # Admins can do everything
     p, role:admin, *, *, *, allow
     g, admins@example.com, role:admin
-    
+
     # Read-only access for everyone else
     p, role:readonly, applications, get, *, allow
     p, role:readonly, clusters, get, *, allow
     p, role:readonly, repositories, get, *, allow
     p, role:readonly, projects, get, *, allow
-  
-  scopes: '[groups]'
+
+  scopes: "[groups]"
