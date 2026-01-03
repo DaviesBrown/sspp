@@ -1,0 +1,14 @@
+apiVersion: v2
+name: sspp-worker
+description: Sales Signal Processing Platform Worker
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: David Brown
+    email: nwosudavid77@gmail.com
+keywords:
+  - worker
+  - queue
+  - bull
+  - sales-signals
