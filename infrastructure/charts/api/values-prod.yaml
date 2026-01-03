@@ -1,0 +1,15 @@
+name: sspp-api
+replicaCount: 5
+image:
+  tag: v1.2.3
+  pullPolicy: Always
+resources:
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"
+  requests:
+    cpu: "1000m"
+    memory: "2Gi"
+env:
+  LOG_LEVEL: "info"
+  NODE_ENV: "production"

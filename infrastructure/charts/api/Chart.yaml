@@ -1,0 +1,13 @@
+apiVersion: v2
+name: sspp-api
+description: Sales Signal Processing Platform API
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: David Brown
+    email: nwosudavid77@gmail.com
+keywords:
+  - api
+  - nestjs
+  - sales-signals

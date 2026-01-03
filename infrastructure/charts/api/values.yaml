@@ -1,0 +1,33 @@
+name: sspp-api
+replicaCount: 3
+
+image:
+  repository: davidbrown77/sspp-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+
+database:
+  url: "postgresql://user:pass@postgres:5432/sspp"
+
+redis:
+  url: "redis://redis:6379"
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+
+env: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
