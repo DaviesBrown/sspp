@@ -1,0 +1,98 @@
+# Blue/Green Rollout for API using Argo Rollouts
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api
+  namespace: sspp-prod
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  
+  selector:
+    matchLabels:
+      app: api
+  
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: davidbrown77/sspp-api:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: PORT
+          value: "3000"
+        envFrom:
+        - configMapRef:
+            name: sspp-config
+        - secretRef:
+            name: sspp-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+  
+  strategy:
+    blueGreen:
+      # Active service receives production traffic
+      activeService: api
+      # Preview service receives test traffic before promotion
+      previewService: api-preview
+      # Auto-promote after preview looks healthy
+      autoPromotionEnabled: false
+      # How long to keep old ReplicaSet before scaling down
+      scaleDownDelaySeconds: 30
+      # Revision history limit
+      previewReplicaCount: 2
+---
+# Active service (production traffic)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: sspp-prod
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  type: LoadBalancer
+---
+# Preview service (for testing new version)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-preview
+  namespace: sspp-prod
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  type: ClusterIP

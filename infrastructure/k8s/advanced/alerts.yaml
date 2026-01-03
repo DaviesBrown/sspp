@@ -1,0 +1,138 @@
+# Prometheus Alerting Rules for SSPP
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sspp-alerts
+  namespace: sspp-dev
+  labels:
+    app: sspp
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: sspp-api-alerts
+    rules:
+    # High error rate
+    - alert: SSPPAPIHighErrorRate
+      expr: |
+        sum(rate(http_requests_total{job="sspp-api", status=~"5.."}[5m])) 
+        / sum(rate(http_requests_total{job="sspp-api"}[5m])) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "High error rate on SSPP API"
+        description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+    
+    # High latency
+    - alert: SSPPAPIHighLatency
+      expr: |
+        histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="sspp-api"}[5m])) by (le)) > 2
+      for: 5m
+      labels:
+        severity: warning
+        team: platform
+      annotations:
+        summary: "High latency on SSPP API"
+        description: "P95 latency is {{ $value }}s (threshold: 2s)"
+    
+    # Pod not ready
+    - alert: SSPPAPIPodNotReady
+      expr: |
+        kube_pod_status_ready{namespace="sspp-dev", pod=~"api-.*", condition="true"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "SSPP API pod not ready"
+        description: "Pod {{ $labels.pod }} has been not ready for 5 minutes"
+    
+    # High CPU usage
+    - alert: SSPPAPIHighCPU
+      expr: |
+        sum(rate(container_cpu_usage_seconds_total{namespace="sspp-dev", pod=~"api-.*"}[5m])) 
+        / sum(kube_pod_container_resource_limits{namespace="sspp-dev", pod=~"api-.*", resource="cpu"}) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        team: platform
+      annotations:
+        summary: "SSPP API high CPU usage"
+        description: "CPU usage is {{ $value | humanizePercentage }} of limit"
+
+  - name: sspp-worker-alerts
+    rules:
+    # Queue backlog
+    - alert: SSPPWorkerQueueBacklog
+      expr: |
+        sum(bull_queue_waiting{queue="sales-events"}) > 1000
+      for: 5m
+      labels:
+        severity: warning
+        team: platform
+      annotations:
+        summary: "High queue backlog"
+        description: "{{ $value }} jobs waiting in queue (threshold: 1000)"
+    
+    # Failed jobs
+    - alert: SSPPWorkerHighFailedJobs
+      expr: |
+        increase(bull_queue_failed_total{queue="sales-events"}[1h]) > 100
+      for: 5m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "High job failure rate"
+        description: "{{ $value }} jobs failed in the last hour"
+    
+    # Worker pods not ready
+    - alert: SSPPWorkerPodNotReady
+      expr: |
+        kube_pod_status_ready{namespace="sspp-dev", pod=~"worker-.*", condition="true"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "SSPP Worker pod not ready"
+        description: "Pod {{ $labels.pod }} has been not ready for 5 minutes"
+
+  - name: sspp-database-alerts
+    rules:
+    # PostgreSQL down
+    - alert: SSPPPostgresDown
+      expr: |
+        kube_pod_status_ready{namespace="sspp-dev", pod=~"postgres-.*", condition="true"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "PostgreSQL is down"
+        description: "PostgreSQL pod has been not ready for 2 minutes"
+    
+    # Redis down
+    - alert: SSPPRedisDown
+      expr: |
+        kube_pod_status_ready{namespace="sspp-dev", pod=~"redis-.*", condition="true"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "Redis is down"
+        description: "Redis pod has been not ready for 2 minutes"
+    
+    # Elasticsearch down
+    - alert: SSPPElasticsearchDown
+      expr: |
+        kube_pod_status_ready{namespace="sspp-dev", pod=~"elasticsearch-.*", condition="true"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "Elasticsearch is down"
+        description: "Elasticsearch pod has been not ready for 2 minutes"

@@ -1,0 +1,168 @@
+# RBAC Configuration for SSPP Kubernetes Cluster
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sspp-api
+  namespace: sspp-dev
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sspp-worker
+  namespace: sspp-dev
+---
+# Role for API service
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sspp-api-role
+  namespace: sspp-dev
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+# Role for Worker service
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sspp-worker-role
+  namespace: sspp-dev
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+---
+# RoleBinding for API
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sspp-api-rolebinding
+  namespace: sspp-dev
+subjects:
+- kind: ServiceAccount
+  name: sspp-api
+  namespace: sspp-dev
+roleRef:
+  kind: Role
+  name: sspp-api-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for Worker
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sspp-worker-rolebinding
+  namespace: sspp-dev
+subjects:
+- kind: ServiceAccount
+  name: sspp-worker
+  namespace: sspp-dev
+roleRef:
+  kind: Role
+  name: sspp-worker-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Developers can deploy to dev namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developers-edit
+  namespace: sspp-dev
+subjects:
+- kind: Group
+  name: developers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
+---
+# Network Policy - API can talk to postgres, redis, elasticsearch
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: sspp-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: elasticsearch
+    ports:
+    - protocol: TCP
+      port: 9200
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+---
+# Network Policy - Worker can talk to postgres, redis, elasticsearch
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-network-policy
+  namespace: sspp-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: worker
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: elasticsearch
+    ports:
+    - protocol: TCP
+      port: 9200
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
