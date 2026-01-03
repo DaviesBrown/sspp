@@ -4,26 +4,54 @@
 
 # Default target
 help:
-	@echo "Sales Signal Processing Platform - Makefile"
+	@echo "════════════════════════════════════════════════════════════════"
+	@echo "  Sales Signal Processing Platform (SSPP) - Makefile"
+	@echo "════════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  setup      - Install dependencies for all services"
-	@echo "  up         - Start all infrastructure services"
-	@echo "  down       - Stop all infrastructure services"
-	@echo "  logs       - View logs from all services"
-	@echo "  test       - Run tests for all services"
-	@echo "  test-api   - Run API service tests"
-	@echo "  test-worker - Run worker service tests"
-	@echo "  build      - Build Docker images locally"
-	@echo "  build-local - Build services for local development"
-	@echo "  up-local   - Build and run full stack locally"
-	@echo "  down-local - Stop local full stack"
-	@echo "  logs-local - View logs from local stack"
-	@echo "  build-dockerhub - Build and tag for DockerHub"
-	@echo "  push-dockerhub  - Push images to DockerHub"
-	@echo "  release-dockerhub - Build and push to DockerHub"
-	@echo "  deploy-k8s - Deploy to Kubernetes"
-	@echo "  clean      - Clean up containers and volumes"
+	@echo "LOCAL DEVELOPMENT:"
+	@echo "  setup          Install dependencies for all services"
+	@echo "  up             Start infrastructure (Postgres, Redis, ES)"
+	@echo "  down           Stop infrastructure"
+	@echo "  up-local       Start full stack with Docker"
+	@echo "  down-local     Stop full stack"
+	@echo "  dev-api        Run API in dev mode"
+	@echo "  dev-worker     Run Worker in dev mode"
+	@echo "  logs           View infrastructure logs"
+	@echo "  logs-local     View full stack logs"
+	@echo ""
+	@echo "TESTING:"
+	@echo "  test           Run all tests"
+	@echo "  test-api       Run API tests"
+	@echo "  test-worker    Run Worker tests"
+	@echo "  quick-test     Test running system"
+	@echo "  lint           Lint all code"
+	@echo ""
+	@echo "DOCKER:"
+	@echo "  build          Build Docker images"
+	@echo "  build-dockerhub DOCKER_USERNAME=x TAG=v1.0.0"
+	@echo "  push-dockerhub  Push to DockerHub"
+	@echo ""
+	@echo "KUBERNETES:"
+	@echo "  deploy-dev     Deploy to dev (Kustomize)"
+	@echo "  deploy-staging Deploy to staging"
+	@echo "  deploy-prod    Deploy to production"
+	@echo "  deploy-argocd  Deploy via ArgoCD GitOps"
+	@echo ""
+	@echo "INFRASTRUCTURE:"
+	@echo "  tf-init        Initialize Terraform"
+	@echo "  tf-plan        Plan infrastructure changes"
+	@echo "  tf-apply       Apply infrastructure"
+	@echo "  install-tools  Install cluster tools (ArgoCD, Prometheus, etc)"
+	@echo "  port-forward   Open dashboards locally"
+	@echo ""
+	@echo "DATABASE:"
+	@echo "  db-migrate     Run database migrations"
+	@echo "  db-seed        Seed sample data"
+	@echo "  db-shell       Open PostgreSQL shell"
+	@echo ""
+	@echo "UTILITIES:"
+	@echo "  status         Check system status"
+	@echo "  clean          Clean up containers and volumes"
 	@echo ""
 
 # Setup - Install dependencies
@@ -79,23 +107,23 @@ test: test-api test-worker
 # Test API service
 test-api:
 	@echo "Running API tests..."
-	cd services/api && npm test
+	cd services/api && pnpm test
 
 # Test worker service
 test-worker:
 	@echo "Running Worker tests..."
-	cd services/worker && npm test
+	cd services/worker && pnpm test
 
 # Build Docker images locally
 build:
 	@echo "Building Docker images locally..."
-	docker-compose -f docker-compose.full.yml build
+	docker-compose -f docker-compose.yml build
 	@echo "✓ Build complete!"
 
 # Build for local development (quick build)
 build-local:
 	@echo "Building services for local development..."
-	docker-compose -f docker-compose.full.yml build --parallel api worker
+	docker-compose -f docker-compose.yml build --parallel api worker
 	@echo "✓ Services built!"
 	@echo ""
 	@echo "Run 'make up-local' to start everything"
@@ -103,7 +131,7 @@ build-local:
 # Build and run everything locally
 up-local:
 	@echo "Building and starting full stack locally..."
-	docker-compose -f docker-compose.full.yml up -d --build
+	docker-compose -f docker-compose.yml up -d --build
 	@echo "Waiting for services to be ready..."
 	@sleep 15
 	@echo "Running database migrations..."
@@ -129,29 +157,29 @@ up-local:
 # Stop local full stack
 down-local:
 	@echo "Stopping local full stack..."
-	docker-compose -f docker-compose.full.yml down
+	docker-compose -f docker-compose.yml down
 
 # View logs from local stack
 logs-local:
-	docker-compose -f docker-compose.full.yml logs -f
+	docker-compose -f docker-compose.yml logs -f
 
 # Restart local services
 restart-local:
 	@echo "Restarting services..."
-	docker-compose -f docker-compose.full.yml restart api worker
+	docker-compose -f docker-compose.yml restart api worker
 	@echo "✓ Services restarted"
 
 # Rebuild and restart a specific service
 rebuild-api:
 	@echo "Rebuilding API service..."
-	docker-compose -f docker-compose.full.yml build api
-	docker-compose -f docker-compose.full.yml up -d api
+	docker-compose -f docker-compose.yml build api
+	docker-compose -f docker-compose.yml up -d api
 	@echo "✓ API rebuilt and restarted"
 
 rebuild-worker:
 	@echo "Rebuilding Worker service..."
-	docker-compose -f docker-compose.full.yml build worker
-	docker-compose -f docker-compose.full.yml up -d worker
+	docker-compose -f docker-compose.yml build worker
+	docker-compose -f docker-compose.yml up -d worker
 	@echo "✓ Worker rebuilt and restarted"
 
 # Build with custom tag
@@ -197,18 +225,71 @@ release-dockerhub:
 	@$(MAKE) build-dockerhub DOCKER_USERNAME=$(DOCKER_USERNAME) TAG=$(TAG)
 	@$(MAKE) push-dockerhub DOCKER_USERNAME=$(DOCKER_USERNAME) TAG=$(TAG)
 
-# Deploy to Kubernetes
-deploy-k8s:
-	@echo "Deploying to Kubernetes..."
-	kubectl apply -f infrastructure/k8s/namespace.yaml
-	kubectl apply -f infrastructure/k8s/configmap.yaml
-	kubectl apply -f infrastructure/k8s/secrets.yaml
-	kubectl apply -f infrastructure/k8s/postgres.yaml
-	kubectl apply -f infrastructure/k8s/redis.yaml
-	kubectl apply -f infrastructure/k8s/elasticsearch.yaml
-	kubectl apply -f infrastructure/k8s/api.yaml
-	kubectl apply -f infrastructure/k8s/worker.yaml
-	@echo "Deployment complete!"
+# Deploy to Kubernetes (using Kustomize)
+deploy-dev:
+	@echo "Deploying to development environment..."
+	kubectl apply -k infrastructure/k8s/overlays/dev
+	@echo "✓ Deployed to dev!"
+
+deploy-staging:
+	@echo "Deploying to staging environment..."
+	kubectl apply -k infrastructure/k8s/overlays/staging
+	@echo "✓ Deployed to staging!"
+
+deploy-prod:
+	@echo "Deploying to production environment..."
+	@read -p "Are you sure you want to deploy to PRODUCTION? [y/N] " confirm && [ "$$confirm" = "y" ]
+	kubectl apply -k infrastructure/k8s/overlays/prod
+	@echo "✓ Deployed to production!"
+
+# Deploy via ArgoCD (GitOps)
+deploy-argocd:
+	@echo "Deploying via ArgoCD..."
+	kubectl apply -f infrastructure/argocd/root-app.yaml
+	@echo "✓ ArgoCD will sync automatically"
+
+# Legacy deploy (for backwards compatibility)
+deploy-k8s: deploy-dev
+
+# ═══════════════════════════════════════════════════════════════
+# TERRAFORM / INFRASTRUCTURE
+# ═══════════════════════════════════════════════════════════════
+
+tf-init:
+	@echo "Initializing Terraform..."
+	cd infrastructure/terraform && terraform init
+
+tf-plan:
+	@echo "Planning infrastructure changes..."
+	cd infrastructure/terraform && terraform plan
+
+tf-apply:
+	@echo "Applying infrastructure..."
+	cd infrastructure/terraform && terraform apply
+
+tf-destroy:
+	@echo "Destroying infrastructure..."
+	@read -p "Are you sure? This will destroy all resources! [y/N] " confirm && [ "$$confirm" = "y" ]
+	cd infrastructure/terraform && terraform destroy
+
+# Install cluster tools
+install-tools:
+	@echo "Installing cluster tools..."
+	./infrastructure/scripts/install-tools.sh
+
+# Port forward dashboards
+port-forward:
+	@echo "Starting port forwards for dashboards..."
+	./infrastructure/scripts/port-forward-dashboards.sh
+
+# Check cluster health
+check-health:
+	@echo "Checking cluster health..."
+	./infrastructure/scripts/check-health.sh
+
+# ═══════════════════════════════════════════════════════════════
+# CLEANUP
+# ═══════════════════════════════════════════════════════════════
 
 # Clean up
 clean:
@@ -217,17 +298,21 @@ clean:
 	docker system prune -f
 	@echo "Cleanup complete!"
 
+# ═══════════════════════════════════════════════════════════════
+# DEVELOPMENT
+# ═══════════════════════════════════════════════════════════════
+
 # Development targets
 dev-api:
-	cd services/api && npm run start:dev
+	cd services/api && pnpm run start:dev
 
 dev-worker:
-	cd services/worker && npm run start:dev
+	cd services/worker && pnpm run start:dev
 
 # Run full stack with Docker Compose
 up-full:
 	@echo "Starting full stack (infrastructure + services)..."
-	DOCKER_REGISTRY=$(DOCKER_REGISTRY) VERSION=$(VERSION) docker-compose -f docker-compose.full.yml up -d
+	DOCKER_REGISTRY=$(DOCKER_REGISTRY) VERSION=$(VERSION) docker-compose -f docker-compose.yml up -d
 	@echo "Waiting for services..."
 	@sleep 15
 	@echo "Running migrations..."
@@ -238,17 +323,25 @@ up-full:
 
 down-full:
 	@echo "Stopping full stack..."
-	docker-compose -f docker-compose.full.yml down
+	docker-compose -f docker-compose.yml down
+
+# ═══════════════════════════════════════════════════════════════
+# LINTING & FORMATTING
+# ═══════════════════════════════════════════════════════════════
 
 # Lint code
 lint:
-	cd services/api && npm run lint
-	cd services/worker && npm run lint
+	cd services/api && pnpm run lint
+	cd services/worker && pnpm run lint
 
 # Format code
 format:
-	cd services/api && npm run format
-	cd services/worker && npm run format
+	cd services/api && pnpm run format
+	cd services/worker && pnpm run format
+
+# ═══════════════════════════════════════════════════════════════
+# DATABASE
+# ═══════════════════════════════════════════════════════════════
 
 # Database operations
 db-migrate:
@@ -260,6 +353,10 @@ db-seed:
 db-shell:
 	docker exec -it sspp-postgres psql -U sspp_user -d sales_signals
 
+# ═══════════════════════════════════════════════════════════════
+# OTHER SERVICES
+# ═══════════════════════════════════════════════════════════════
+
 # Redis operations
 redis-shell:
 	docker exec -it sspp-redis redis-cli
@@ -267,6 +364,10 @@ redis-shell:
 # Elasticsearch operations
 es-health:
 	curl http://localhost:9200/_cluster/health?pretty
+
+# ═══════════════════════════════════════════════════════════════
+# TESTING & DIAGNOSTICS
+# ═══════════════════════════════════════════════════════════════
 
 # Quick test of the system
 quick-test:
@@ -296,4 +397,4 @@ status:
 	@echo "  System Status"
 	@echo "════════════════════════════════════════"
 	@echo ""
-	@docker-compose -f docker-compose.full.yml ps
+	@docker-compose -f docker-compose.yml ps
