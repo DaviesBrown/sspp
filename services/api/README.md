@@ -26,7 +26,8 @@ External Clients
 - **Request Validation** using class-validator decorators
 - **Queue Publishing** via Bull/Redis
 - **Health Checks** for Kubernetes probes
-- **Structured Logging** for observability
+- **Prometheus Metrics** for observability and monitoring
+- **Structured Logging** for debugging and analysis
 
 ## API Endpoints
 
@@ -36,6 +37,45 @@ External Clients
 | `GET` | `/events/:id` | Retrieve a processed event |
 | `GET` | `/health` | Liveness probe endpoint |
 | `GET` | `/ready` | Readiness probe endpoint |
+| `GET` | `/metrics` | Prometheus metrics endpoint |
+
+## Prometheus Metrics
+
+The API exposes the following metrics at `/api/v1/metrics`:
+
+### HTTP Metrics
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sspp_api_http_request_duration_seconds` | Histogram | Duration of HTTP requests |
+| `sspp_api_http_requests_total` | Counter | Total HTTP requests by method/route/status |
+
+### Event Metrics
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sspp_api_events_received_total` | Counter | Events received by type |
+| `sspp_api_events_queued_total` | Counter | Events successfully queued |
+| `sspp_api_events_queue_errors_total` | Counter | Events that failed to queue |
+
+### Queue Metrics
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sspp_api_queue_size` | Gauge | Current queue size by state |
+| `sspp_api_queue_processing_seconds` | Histogram | Time to add events to queue |
+
+### Infrastructure Metrics
+| Metric | Type | Description |
+|--------|------|-------------|
+| `sspp_api_db_query_duration_seconds` | Histogram | Database query duration |
+| `sspp_api_db_connection_pool` | Gauge | DB connection pool status |
+| `sspp_api_redis_operation_duration_seconds` | Histogram | Redis operation duration |
+| `sspp_api_redis_connection_status` | Gauge | Redis connection status (1=up, 0=down) |
+
+### Default Node.js Metrics
+Standard `prom-client` metrics with `sspp_api_` prefix including:
+- `sspp_api_process_cpu_*` - CPU usage
+- `sspp_api_process_resident_memory_bytes` - Memory usage
+- `sspp_api_nodejs_eventloop_lag_*` - Event loop metrics
+- `sspp_api_nodejs_gc_*` - Garbage collection metrics
 
 ## Project Structure
 
