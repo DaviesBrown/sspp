@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MetricsService, MetricsInterceptor } from './metrics';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -37,11 +38,16 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors();
   
+  // Global metrics interceptor
+  const metricsService = app.get(MetricsService);
+  app.useGlobalInterceptors(new MetricsInterceptor(metricsService));
+  
   const port = process.env.PORT || 3000;
   await app.listen(port);
   
   console.log(`🚀 API Service is running on: http://localhost:${port}/${apiPrefix}`);
   console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  console.log(`📊 Prometheus Metrics: http://localhost:${port}/${apiPrefix}/metrics`);
 }
 
 bootstrap();
