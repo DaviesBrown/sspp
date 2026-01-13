@@ -6,22 +6,22 @@ A **production-grade, cloud-native backend platform** for processing sales activ
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         SSPP Architecture                                │
+│                         SSPP Architecture                                             │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   External Clients                                                       │
-│         │                                                                │
-│         ▼                                                                │
-│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐              │
-│   │    API      │────▶│    Redis    │────▶│   Worker    │              │
-│   │  (NestJS)   │     │   (Queue)   │     │  (Node.js)  │              │
-│   └─────────────┘     └─────────────┘     └──────┬──────┘              │
-│                                                   │                      │
-│                                    ┌──────────────┼──────────────┐      │
-│                                    ▼              ▼              ▼      │
-│                              PostgreSQL      Redis          Elasticsearch│
-│                               (Store)       (Cache)         (Search)    │
-│                                                                          │
+│                                                                                      │
+│   External Clients                                                                   │
+│         │                                                                            │
+│         ▼                                                                            │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                     │
+│   │    API         │───▶│    Redis      │───▶│   Worker       │                    │
+│   │  (NestJS)      │     │   (Queue)     │     │  (Node.js).    │                    │
+│   └─────────────┘     └─────────────┘     └──────┬──────┘                    │
+│                                                         │                            │
+│                                    ┌──────────────┼──────────────┐              │
+│                                    ▼                ▼              ▼               │
+│                              PostgreSQL      Redis          Elasticsearch.           │
+│                               (Store)       (Cache)         (Search)                 │
+│                                                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -78,7 +78,6 @@ sspp/
 │   ├── database/                # SQL init/migrations
 │   └── scripts/                 # Tool installation scripts
 │
-├── articles/                    # 10-part DevOps article series
 ├── .github/workflows/           # CI/CD pipelines
 ├── docker-compose.yml           # Local infrastructure
 └── docker-compose.full.yml      # Full local stack
@@ -161,19 +160,7 @@ Install all tools:
 ## Documentation
 
 This project includes a **10-part DevOps article series** documenting the journey from manual deployment to production GitOps:
-
-| Part | Topic | Article |
-|------|-------|---------|
-| 1 | Manual Deployment | [01-default-way](articles/01-default-way-server-deployment.md) |
-| 2 | Process Managers (PM2) | [02-process-managers](articles/02-process-managers-pm2.md) |
-| 3 | Docker Containers | [03-docker-containers](articles/03-docker-containers.md) |
-| 4 | Docker Compose | [04-docker-compose](articles/04-docker-compose.md) |
-| 5 | Why Orchestration? | [05-orchestration-need](articles/05-orchestration-need.md) |
-| 6 | Kubernetes | [06-kubernetes](articles/06-kubernetes-fundamentals.md) |
-| 7 | Terraform IaC | [07-terraform](articles/07-terraform-infrastructure-as-code.md) |
-| 8 | Helm Charts | [08-helm](articles/08-helm-packaging-kubernetes-apps.md) |
-| 9 | ArgoCD GitOps | [09-argocd](articles/09-argocd-gitops.md) |
-| 10 | Production Ops | [10-production](articles/10-scaling-failure-production-operations.md) |
+[Start here](https://dev.to/daviesbrown/part-1-the-default-way-putting-an-app-on-a-server-and-why-it-breaks-2a5j)
 
 ## Security
 
